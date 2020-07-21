@@ -161,17 +161,20 @@ func msiToAuthorizer(mc auth.MSIConfig) (autorest.Authorizer, error) {
 }
 
 func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
-	if c.TenantId == "" {
-		defaultSubscription, err := azureDefaultSubscription()
-		if err != nil {
-			return nil, err
-		}
-		c.TenantId = defaultSubscription.TenantID
-	}
+	//if c.TenantId == "" {
+	//	defaultSubscription, err := azureDefaultSubscription()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	c.TenantId = defaultSubscription.TenantID
+	//}
 
 	env, err := auth.GetSettingsFromEnvironment()
 	if err != nil {
 		return nil, err
+	}
+	if c.TenantId == "" {
+		c.TenantId = env.Values[auth.TenantID]
 	}
 
 	if cred, err := env.GetClientCredentials(); err == nil {
