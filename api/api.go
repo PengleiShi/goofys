@@ -103,20 +103,41 @@ func Mount(
 				//	Authorizer: &config,
 				//}
 				//bucketName = spec.Bucket
-				auth, err := AzureAuthorizerConfig{
-					Log: GetLogger("adlv2"),
-				}.Authorizer()
+
+				config, err := AzureDataLakeGen2Config(flags.Endpoint, spec.Bucket, "dfs")
 				if err != nil {
-					err = fmt.Errorf("couldn't load azure credentials: %v",
-						err)
 					return nil, nil, err
 				}
-				flags.Backend = &ADLv1Config{
-					Endpoint:   spec.Bucket,
-					Authorizer: auth,
+				if config.Container != "" {
+					bucketName = config.Container
+				} else {
+					bucketName = spec.Bucket
+				}
+				if config.Prefix != "" {
+					spec.Prefix = config.Prefix
 				}
 				if spec.Prefix != "" {
 					bucketName += ":" + spec.Prefix
+				}
+
+				if config.AccountKey != "" {
+					flags.Backend = &ADLv2Config{
+						Endpoint:   config.Endpoint,
+						Authorizer: &config,
+					}
+				} else {
+					auth, err := AzureAuthorizerConfig{
+						Log: GetLogger("adlv2"),
+					}.Authorizer()
+					if err != nil {
+						err = fmt.Errorf("couldn't load azure credentials: %v",
+							err)
+						return nil, nil, err
+					}
+					flags.Backend = &ADLv2Config{
+						Endpoint:   config.Endpoint,
+						Authorizer: auth,
+					}
 				}
 			}
 		}

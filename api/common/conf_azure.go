@@ -173,6 +173,7 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 	if err != nil {
 		return nil, err
 	}
+	env.Values[auth.Resource] = env.Environment.ResourceIdentifiers.Storage
 	if c.TenantId == "" {
 		c.TenantId = env.Values[auth.TenantID]
 	}
@@ -190,35 +191,35 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 		}
 	}
 
-	if env.Values[auth.Resource] == "" {
-		env.Values[auth.Resource] = env.Environment.ResourceManagerEndpoint
-	}
-	if env.Values[auth.ActiveDirectoryEndpoint] == "" {
-		env.Values[auth.ActiveDirectoryEndpoint] = env.Environment.ActiveDirectoryEndpoint
-	}
-	adEndpoint := strings.Trim(env.Values[auth.ActiveDirectoryEndpoint], "/") +
-		"/" + c.TenantId
-	c.Log.Debugf("looking for access token for %v", adEndpoint)
-
-	accessTokensPath, err := cli.AccessTokensPath()
-	if err == nil {
-		accessTokens, err := cli.LoadTokens(accessTokensPath)
-		if err == nil {
-			for _, t := range accessTokens {
-				if t.Authority == adEndpoint {
-					c.Log.Debugf("found token for %v %v", t.Resource, t.Authority)
-					var authorizer autorest.Authorizer
-					authorizer, err = tokenToAuthorizer(&t)
-					if err == nil {
-						return authorizer, nil
-					}
-				}
-			}
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
+	//if env.Values[auth.Resource] == "" {
+	//	env.Values[auth.Resource] = env.Environment.ResourceManagerEndpoint
+	//}
+	//if env.Values[auth.ActiveDirectoryEndpoint] == "" {
+	//	env.Values[auth.ActiveDirectoryEndpoint] = env.Environment.ActiveDirectoryEndpoint
+	//}
+	//adEndpoint := strings.Trim(env.Values[auth.ActiveDirectoryEndpoint], "/") +
+	//	"/" + c.TenantId
+	//c.Log.Debugf("looking for access token for %v", adEndpoint)
+	//
+	//accessTokensPath, err := cli.AccessTokensPath()
+	//if err == nil {
+	//	accessTokens, err := cli.LoadTokens(accessTokensPath)
+	//	if err == nil {
+	//		for _, t := range accessTokens {
+	//			if t.Authority == adEndpoint {
+	//				c.Log.Debugf("found token for %v %v", t.Resource, t.Authority)
+	//				var authorizer autorest.Authorizer
+	//				authorizer, err = tokenToAuthorizer(&t)
+	//				if err == nil {
+	//					return authorizer, nil
+	//				}
+	//			}
+	//		}
+	//	}
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	c.Log.Debug("falling back to MSI")
 	return msiToAuthorizer(env.GetMSI())
@@ -400,6 +401,84 @@ func AzureBlobConfig(endpoint string, location string, storageType string) (conf
 				err = nil
 			}
 		}
+	}
+
+	if endpoint == "" {
+		endpoint = "https://" + account + "." + storageType + "." +
+			azure.PublicCloud.StorageEndpointSuffix
+		azbLog.Infof("Unable to detect endpoint for account %v, using %v",
+			account, endpoint)
+	}
+
+	config.Init()
+	config.Endpoint = endpoint
+	config.AccountName = account
+	config.AccountKey = key
+
+	return
+}
+
+func AzureDataLakeGen2Config(endpoint string, location string, storageType string) (config AZBlobConfig, err error) {
+	if storageType != "dfs" {
+		panic(fmt.Sprintf("unknown storage type: %v", storageType))
+	}
+
+	account := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	key := os.Getenv("AZURE_STORAGE_KEY")
+	configDir := os.Getenv("AZURE_CONFIG_DIR")
+
+	// check if the url contains the storage endpoint
+	at := strings.Index(location, "@")
+	if at != -1 {
+		storageEndpoint := "https://" + location[at+1:]
+		u, urlErr := url.Parse(storageEndpoint)
+		if urlErr == nil {
+			// if it's valid, then it overrides --endpoint
+			endpoint = storageEndpoint
+			config.Container = location[:at]
+			config.Prefix = strings.Trim(u.Path, "/")
+		}
+	}
+
+	// parse account from endpoint
+	if endpoint != "" && endpoint != "http://127.0.0.1:8080/devstoreaccount1/" {
+		var u *url.URL
+		u, err = url.Parse(endpoint)
+		if err != nil {
+			return
+		}
+
+		dot := strings.Index(u.Hostname(), ".")
+		if dot != -1 {
+			account = u.Hostname()[:dot]
+		}
+	}
+
+	if account == "" || key == "" {
+		if configDir == "" {
+			configDir, _ = homedir.Expand("~/.azure")
+		}
+		if config, err := ini.Load(configDir + "/config"); err == nil {
+			if sect, err := config.GetSection("storage"); err == nil {
+				if account == "" {
+					if k, err := sect.GetKey("account"); err == nil {
+						account = k.Value()
+						azbLog.Debugf("Using azure account: %v", account)
+					}
+				}
+				if key == "" {
+					if k, err := sect.GetKey("key"); err == nil {
+						key = k.Value()
+					}
+				}
+			}
+		}
+	}
+	// at this point I have to have the account
+	if account == "" {
+		err = fmt.Errorf("Missing account: configure via AZURE_STORAGE_ACCOUNT "+
+			"or %v/config", configDir)
+		return
 	}
 
 	if endpoint == "" {
