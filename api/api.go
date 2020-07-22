@@ -132,7 +132,7 @@ func Mount(
 						return nil, nil, err
 					}
 					flags.Backend = &ADLv2Config{
-						Endpoint:   spec.Bucket,
+						Endpoint:   config.Endpoint,
 						Authorizer: auth,
 					}
 				}
