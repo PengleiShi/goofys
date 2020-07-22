@@ -173,6 +173,7 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 	if err != nil {
 		return nil, err
 	}
+	env.Values[auth.Resource] = env.Environment.ResourceIdentifiers.Storage
 	if c.TenantId == "" {
 		c.TenantId = env.Values[auth.TenantID]
 	}
@@ -190,9 +191,9 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 		}
 	}
 
-	if env.Values[auth.Resource] == "" {
-		env.Values[auth.Resource] = env.Environment.ResourceManagerEndpoint
-	}
+	//if env.Values[auth.Resource] == "" {
+	//	env.Values[auth.Resource] = env.Environment.ResourceManagerEndpoint
+	//}
 	if env.Values[auth.ActiveDirectoryEndpoint] == "" {
 		env.Values[auth.ActiveDirectoryEndpoint] = env.Environment.ActiveDirectoryEndpoint
 	}
