@@ -121,7 +121,10 @@ func Mount(
 				}
 
 				if config.AccountKey != "" {
-					flags.Backend = &config
+					flags.Backend = &ADLv2Config{
+						Endpoint:   config.Endpoint,
+						Authorizer: &config,
+					}
 				} else {
 					auth, err := AzureAuthorizerConfig{
 						Log: GetLogger("adlv2"),
