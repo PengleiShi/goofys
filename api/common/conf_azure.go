@@ -179,10 +179,10 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 	}
 
 	if cred, err := env.GetClientCredentials(); err == nil {
-		log.Fatalf("Mounting file system: %v", cred.TenantID)
-		log.Fatalf("Mounting file system: %v", cred.AADEndpoint)
-		log.Fatalf("Mounting file system: %v", cred.ClientID)
-		log.Fatalf("Mounting file system: %v", cred.ClientSecret)
+		log.Info("Mounting file system: ", cred.TenantID)
+		log.Info("Mounting file system: ", cred.AADEndpoint)
+		log.Info("Mounting file system: ", cred.ClientID)
+		log.Info("Mounting file system: ", cred.ClientSecret)
 		if authorizer, err := cred.Authorizer(); err == nil {
 			return authorizer, err
 		}
