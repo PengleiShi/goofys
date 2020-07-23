@@ -179,10 +179,6 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 	}
 
 	if cred, err := env.GetClientCredentials(); err == nil {
-		log.Info("Mounting file system: ", cred.TenantID)
-		log.Info("Mounting file system: ", cred.AADEndpoint)
-		log.Info("Mounting file system: ", cred.ClientID)
-		log.Info("Mounting file system: ", cred.ClientSecret)
 		if authorizer, err := cred.Authorizer(); err == nil {
 			return authorizer, err
 		}
@@ -198,32 +194,32 @@ func (c AzureAuthorizerConfig) Authorizer() (autorest.Authorizer, error) {
 	//if env.Values[auth.Resource] == "" {
 	//	env.Values[auth.Resource] = env.Environment.ResourceManagerEndpoint
 	//}
-	if env.Values[auth.ActiveDirectoryEndpoint] == "" {
-		env.Values[auth.ActiveDirectoryEndpoint] = env.Environment.ActiveDirectoryEndpoint
-	}
-	adEndpoint := strings.Trim(env.Values[auth.ActiveDirectoryEndpoint], "/") +
-		"/" + c.TenantId
-	c.Log.Debugf("looking for access token for %v", adEndpoint)
-
-	accessTokensPath, err := cli.AccessTokensPath()
-	if err == nil {
-		accessTokens, err := cli.LoadTokens(accessTokensPath)
-		if err == nil {
-			for _, t := range accessTokens {
-				if t.Authority == adEndpoint {
-					c.Log.Debugf("found token for %v %v", t.Resource, t.Authority)
-					var authorizer autorest.Authorizer
-					authorizer, err = tokenToAuthorizer(&t)
-					if err == nil {
-						return authorizer, nil
-					}
-				}
-			}
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
+	//if env.Values[auth.ActiveDirectoryEndpoint] == "" {
+	//	env.Values[auth.ActiveDirectoryEndpoint] = env.Environment.ActiveDirectoryEndpoint
+	//}
+	//adEndpoint := strings.Trim(env.Values[auth.ActiveDirectoryEndpoint], "/") +
+	//	"/" + c.TenantId
+	//c.Log.Debugf("looking for access token for %v", adEndpoint)
+	//
+	//accessTokensPath, err := cli.AccessTokensPath()
+	//if err == nil {
+	//	accessTokens, err := cli.LoadTokens(accessTokensPath)
+	//	if err == nil {
+	//		for _, t := range accessTokens {
+	//			if t.Authority == adEndpoint {
+	//				c.Log.Debugf("found token for %v %v", t.Resource, t.Authority)
+	//				var authorizer autorest.Authorizer
+	//				authorizer, err = tokenToAuthorizer(&t)
+	//				if err == nil {
+	//					return authorizer, nil
+	//				}
+	//			}
+	//		}
+	//	}
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
 
 	c.Log.Debug("falling back to MSI")
 	return msiToAuthorizer(env.GetMSI())
