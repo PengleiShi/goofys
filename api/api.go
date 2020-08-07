@@ -63,7 +63,7 @@ func Mount(
 				if spec.Prefix != "" {
 					bucketName = ":" + spec.Prefix
 				}
-			case "wasb":
+			case "wasb", "wasbs":
 				config, err := AzureBlobConfig(flags.Endpoint, spec.Bucket, "blob")
 				if err != nil {
 					return nil, nil, err
@@ -80,7 +80,7 @@ func Mount(
 				if spec.Prefix != "" {
 					bucketName += ":" + spec.Prefix
 				}
-			case "abfs":
+			case "abfs", "abfss":
 				//config, err := AzureBlobConfig(flags.Endpoint, spec.Bucket, "dfs")
 				//if err != nil {
 				//	return nil, nil, err
